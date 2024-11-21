@@ -33,6 +33,15 @@ app = Flask(__name__)
 api = Api(app)
 app.config['SECRET_KEY'] = 'key'
 
+default_language = 'en_US'
+locale.setlocale(locale.LC_ALL, default_language + ".utf8")
+languages = {}
+language_list = glob.glob("language/*.json")
+for lang in language_list:
+    filename = lang.split('/')
+    lang_code = filename[1].split('.')[0]
+    with open(lang, 'r', encoding='utf8') as file:
+        languages[lang_code] = json.loads(file.read())
 login_manager = LoginManager()
 login_manager.init_app(app)
 socketIO = SocketIO(app)
@@ -232,6 +241,14 @@ def connect_to_room(room_id, player_id):
     else:
         return redirect('/rooms')
 
+@app.route('/test', methods=['GET', 'POST'])
+def path_test():
+    if request.method == 'POST':
+        value = request.values.get('value')
+        return f"<p>method is POST and value is {value}</p>"
+    else:
+        return "<p>method is GET</p>"
+
 
 @app.route('/leave_from_room/<int:room_id>/<int:player_id>', methods=['GET', 'POST'])
 def leave_from_room(room_id, player_id):
@@ -247,33 +264,6 @@ def in_room(room_id):
         lang = default_language
     current_room = get_room(room_id)
     return render_template('in_room.html', current_room=current_room, title="В игре", **languages[lang])
-
-
-def update_stock_cards(room_id, json):
-    print('updating stock cards...')
-    print(json)
-    emit('update_stock_cards', json, to=room_id)
-
-
-def show_stock_cards(room_id):
-    print('showing stock cards...')
-    emit('show_stock_cards', [], to=room_id)
-
-
-def update_stock_table(room_id, json):
-    emit('update_stock_table', json, to=room_id)
-
-
-def update_case(room_id, json):
-    emit('update_case', json, to=room_id)
-
-
-def clear_playzone(room_id):
-    emit('clear_playzone', to=room_id)
-
-
-def win(room_id, json):
-    emit('win', json, to=room_id)
 
 
 @socketIO.on('decision')
@@ -459,22 +449,6 @@ def get_com_buy(json):
     emit('get_com_buy', json, to=room)
 
 
-def main():
-    db_session.global_init("db/project_db.db")
-    db_sess = db_session.create_session()
-
-    rooms_from_db = db_sess.query(Rooms).all()
-    global active_rooms
-    for room_from_db in rooms_from_db:
-        new_room = InGameRoom(room_from_db.id, room_from_db.title, room_from_db.data, room_from_db.players)
-        active_rooms.append(new_room)
-
-
-    port = int(os.environ.get("PORT", 3500))
-    app.run(host='0.0.0.0', port=port, ssl_context='adhoc')
-    # app.run(debug=True)
-
-
 def get_room(room_id):
     for room in active_rooms:
         if room:
@@ -485,10 +459,6 @@ def get_room(room_id):
 
 def log(room_id, data):
     emit('log', data, to=room_id)
-
-
-def update_money(room_id, json):
-    emit('update_money', json, to=room_id)
 
 
 def add_friend(self_id, friend_id):
@@ -511,15 +481,15 @@ def del_friend(self_id, friend_id):
 
 
 if __name__ == '__main__':
-    default_language = 'en_US'
-    locale.setlocale(locale.LC_ALL, default_language + ".utf8")
-    languages = {}
-    language_list = glob.glob("language/*.json")
 
-    for lang in language_list:
-        filename = lang.split('/')
-        lang_code = filename[1].split('.')[0]
+    db_session.global_init("db/project_db.db")
+    db_sess = db_session.create_session()
 
-        with open(lang, 'r', encoding='utf8') as file:
-            languages[lang_code] = json.loads(file.read())
-    main()
+    rooms_from_db = db_sess.query(Rooms).all()
+    for room_from_db in rooms_from_db:
+        new_room = InGameRoom(room_from_db.id, room_from_db.title, room_from_db.data, room_from_db.players)
+        active_rooms.append(new_room)
+
+    port = int(os.environ.get("PORT", 3500))
+    app.run(host='0.0.0.0', port=port, ssl_context='adhoc')
+

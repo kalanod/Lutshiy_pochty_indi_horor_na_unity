@@ -1,3 +1,5 @@
+from flask_socketio import emit
+
 from data import db_session
 from data.rooms import Rooms
 from data.users import User
@@ -5,9 +7,39 @@ from data.users import User
 import random
 import json
 
-from main import update_case, update_stock_cards, clear_playzone, update_stock_table, win, update_money, show_stock_cards
 
 START_BUDGET = 1000000
+
+
+def update_money(room_id, json):
+    emit('update_money', json, to=room_id)
+
+
+def update_stock_cards(room_id, json):
+    print('updating stock cards...')
+    print(json)
+    emit('update_stock_cards', json, to=room_id)
+
+
+def show_stock_cards(room_id):
+    print('showing stock cards...')
+    emit('show_stock_cards', [], to=room_id)
+
+
+def update_stock_table(room_id, json):
+    emit('update_stock_table', json, to=room_id)
+
+
+def update_case(room_id, json):
+    emit('update_case', json, to=room_id)
+
+
+def clear_playzone(room_id):
+    emit('clear_playzone', to=room_id)
+
+
+def win(room_id, json):
+    emit('win', json, to=room_id)
 
 
 class InGameRoom:
